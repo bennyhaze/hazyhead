@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Fee Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 100%;
+            width: 90%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 1.5em;
+        }
+        h2 {
+            color: #007BFF;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+            color: #555;
+            font-size: 1em;
+        }
+        input[type="number"],
+        input[type="date"],
+        input[type="time"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 1.1em;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #007BFF;
+            border-radius: 5px;
+            background-color: #e7f3fe;
+            display: none;
+        }
+        .remark {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #777;
+            text-align: center;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.3em;
+            }
+            h2 {
+                font-size: 1.1em;
+            }
+            button {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Parking Fee Calculator</h1>
+
+    <!-- Hourly Rates Group -->
+    <h2>Charging Rates</h2>
+    <label for="dayRate">Daytime Rate ($/hour):</label>
+    <input type="number" id="dayRate" value="6" required>
+
+    <label for="nightRate">Nighttime Rate ($/hour):</label>
+    <input type="number" id="nightRate" value="3" required>
+
+    <!-- Time Periods Group -->
+    <h2>Time Settings</h2>
+    <label for="dayStart">Daytime Start Time:</label>
+    <input type="time" id="dayStart" value="08:00" required>
+
+    <label for="dayEnd">Daytime End Time:</label>
+    <input type="time" id="dayEnd" value="20:00" required>
+
+    <label for="nightStart">Nighttime Start Time:</label>
+    <input type="time" id="nightStart" value="20:00" required>
+
+    <label for="nightEnd">Nighttime End Time:</label>
+    <input type="time" id="nightEnd" value="08:00" required>
+
+    <!-- Check-in and Check-out Group -->
+    <h2>Entry and Exit</h2>
+    <label for="checkInDate">Entry Date (YYYY-MM-DD):</label>
+    <input type="date" id="checkInDate" required>
+
+    <label for="checkInTime">Entry Time (HH:MM):</label>
+    <input type="time" id="checkInTime" required>
+
+    <label for="checkOutDate">Exit Date (YYYY-MM-DD):</label>
+    <input type="date" id="checkOutDate" required>
+
+    <label for="checkOutTime">Exit Time (HH:MM):</label>
+    <input type="time" id="checkOutTime" required>
+
+    <button type="button" onclick="calculateFee()">Calculate Fee</button>
+
+    <div id="result" class="result"></div>
+    
+    <div class="remark">
+        This calculator is for reference only; actual fees may vary.
+    </div>
+</div>
+
+<script>
+function calculateFee() {
+    const dayRate = parseFloat(document.getElementById('dayRate').value);
+    const nightRate = parseFloat(document.getElementById('nightRate').value);
+    
+    const dayStart = document.getElementById('dayStart').value;
+    const dayEnd = document.getElementById('dayEnd').value;
+    const nightStart = document.getElementById('nightStart').value;
+    const nightEnd = document.getElementById('nightEnd').value;
+
+    const checkInDate = new Date(document.getElementById('checkInDate').value + 'T' + document.getElementById('checkInTime').value);
+    const checkOutDate = new Date(document.getElementById('checkOutDate').value + 'T' + document.getElementById('checkOutTime').value);
+
+    if (checkOutDate <= checkInDate) {
+        alert("Exit time must be after entry time.");
+        return;
+    }
+
+    let totalFee = 0;
+    const feeDetails = {};
+
+    let currentTime = checkInDate;
+
+    while (currentTime < checkOutDate) {
+        const dateKey = currentTime.toISOString().split('T')[0];
+        if (!feeDetails[dateKey]) {
+            feeDetails[dateKey] = { dayHours: 0, dayFee: 0, nightHours: 0, nightFee: 0 };
+        }
+
+        // Daytime calculation
+        const endOfDay = new Date(currentTime);
+        endOfDay.setHours(...dayEnd.split(':')); // Set to user-defined end time
+
+        if (endOfDay > checkOutDate) {
+            endOfDay.setTime(checkOutDate.getTime());
+        }
+
+        const dayHours = Math.max(0, (endOfDay - currentTime) / 3600000);
+        feeDetails[dateKey].dayHours += dayHours;
+        feeDetails[dateKey].dayFee += dayHours * dayRate;
+        totalFee += dayHours * dayRate;
+        currentTime = endOfDay;
+
+        // Nighttime calculation
+        if (currentTime < checkOutDate) {
+            const endOfNight = new Date(currentTime);
+            endOfNight.setHours(...nightEnd.split(':')); // Set to user-defined end time
+
+            if (endOfNight <= currentTime) {
+                endOfNight.setDate(endOfNight.getDate() + 1);
+            }
+            if (endOfNight > checkOutDate) {
+                endOfNight.setTime(checkOutDate.getTime());
+            }
+
+            const nightHours = Math.max(0, (endOfNight - currentTime) / 3600000);
+            feeDetails[dateKey].nightHours += nightHours;
+            feeDetails[dateKey].nightFee += nightHours * nightRate;
+            totalFee += nightHours * nightRate;
+            currentTime = endOfNight;
+        }
+    }
+
+    displayResults(feeDetails, totalFee);
+}
+
+function displayResults(feeDetails, totalFee) {
+    let resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = `<h3>Fee Details</h3>`;
+    
+    for (const date in feeDetails) {
+        resultDiv.innerHTML += `
+            <p>Date: ${date}</p>
+            <p>Daytime (Hours): ${feeDetails[date].dayHours.toFixed(2)} hours</p>
+            <p>Daytime Fee: $${feeDetails[date].dayFee.toFixed(2)}</p>
+            <p>Nighttime (Hours): ${feeDetails[date].nightHours.toFixed(2)} hours</p>
+            <p>Nighttime Fee: $${feeDetails[date].nightFee.toFixed(2)}</p>
+            <hr>
+        `;
+    }
+    resultDiv.innerHTML += `<h4>Total Parking Fee: $${totalFee.toFixed(2)}</h4>`;
+    resultDiv.style.display = 'block';
+}
+</script>
+
+</body>
+</html>
